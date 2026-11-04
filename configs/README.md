@@ -42,6 +42,8 @@ Every key is optional; the defaults are shown.
 | `max_output_tokens` | `32768` | per-request output cap |
 | `port` | `8082` | engine port |
 | `ui_port` | `8090` | Studio port |
+| `host` | *(unset)* | engine bind address → `NINFER_HOST` (default `127.0.0.1`). The Studio always stays loopback-only; this only changes where the **engine** listens. |
+| `api_key` | *(absent)* | a value: required as bearer token or `x-api-key` header on every request → `--api-key`; the Studio forwards it to the engine automatically and `/health` stays open. `null`: explicitly **no** key — it clears any `NINFER_API_KEY` the shell inherited, so the profile is unambiguous about its own auth. Absent: inherits the environment. |
 | `context_store` | `default` | `default` → `.cache/ninfer-context/<model>` · a path · `""` to disable |
 | `webui.enabled` | `true` | start the Studio (web UI) alongside the engine |
 | `webui.auto_open` | `true` | open the browser when the Studio is up (`false` → `--no-browser`) |
@@ -62,3 +64,5 @@ size: the engine then either starts at 262k or refuses to start rather than shri
   (`<profile>.json stop`). A foreign engine (e.g. from `scripts/run.sh`) must be killed by hand
   (`pkill -f ninfer-serve`).
 * **`uv`** is required for the Studio path; engine-only profiles (`webui.enabled: false`) don't need it.
+* **Publishing on the network:** `host: "0.0.0.0"` exposes the engine to every network the box is
+  on. Pair it with `api_key`, otherwise the API is unauthenticated.

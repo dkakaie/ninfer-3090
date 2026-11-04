@@ -58,7 +58,8 @@
 # NINFER_AUTO_HOST_CACHE=on) the host retry, and NINFER_FALLBACK=off turns both off.
 #
 # OVERRIDES, from the environment. All profiles: NINFER_MODEL (artifact path), NINFER_MODEL_DIR,
-# NINFER_SERVER, NINFER_HOST, NINFER_PORT, NINFER_CHAT_TEMPLATE (path to a local Jinja file, passed
+# NINFER_SERVER, NINFER_HOST, NINFER_PORT, NINFER_API_KEY (value required as bearer / x-api-key on
+# every request, passed as --api-key; never printed), NINFER_CHAT_TEMPLATE (path to a local Jinja file, passed
 # straight to --chat-template; overrides the artifact's built-in template). `tuned` also:
 # NINFER_CONTEXT, NINFER_CONCURRENCY,
 # NINFER_KV_CAPACITY, NINFER_KV_DTYPE, NINFER_SPEC, NINFER_DRAFT_TOKENS, NINFER_PREFILL_CHUNK,
@@ -359,6 +360,16 @@ if [[ -n "${NINFER_CHAT_TEMPLATE:-}" ]]; then
   profile_args+=(--chat-template "$NINFER_CHAT_TEMPLATE")
 fi
 
+# API key: every request must carry it as a bearer token or x-api-key header; /health and
+# CORS preflight stay open. Appended only when set, so an unset variable keeps the
+# unauthenticated default. The engine redacts it from its own startup line; the launcher
+# never prints it either.
+api_note=''
+if [[ -n "${NINFER_API_KEY:-}" ]]; then
+  profile_args+=(--api-key "$NINFER_API_KEY")
+  api_note='Auth: API key required on every request  (NINFER_API_KEY)'
+fi
+
 if [[ ! -x "$server" ]]; then
   printf 'Missing ninfer-serve (looked for %s)\n' "$server" >&2
   printf 'Build it first:  ./scripts/build.sh\n' >&2
@@ -379,6 +390,7 @@ if [[ "$profile" == 'tuned' ]]; then
   [[ -z "$loop_note" ]] || printf '%s\n' "$loop_note"
 fi
 [[ -z "${NINFER_CHAT_TEMPLATE:-}" ]] || printf 'Chat template: %s\n' "$NINFER_CHAT_TEMPLATE"
+[[ -z "${api_note:-}" ]] || printf '%s\n' "$api_note"
 [[ -z "${hint:-}" ]] || printf '%s\n' "$hint"
 printf 'API: http://%s:%s/v1\n\n' "$HOST" "$PORT"
 

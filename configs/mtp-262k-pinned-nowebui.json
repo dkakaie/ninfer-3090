@@ -6,6 +6,9 @@
   "lanes": 2,
   "kv_dtype": "rk4v4",
   "vision": true,
+  "host": "127.0.0.1",
+  "port": 8082,
+  "api_key": null,
   "context": 262144,
   "context_store": "default",
   "webui": { "enabled": false }

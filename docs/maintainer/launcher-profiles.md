@@ -102,14 +102,15 @@ The sections below record the measurements behind the earlier `rk8v4` defaults. 
 too, so one file serves all three.
 
 Overrides, from the environment, so a launcher never needs editing: `NINFER_MODEL` (artifact path),
-`NINFER_MODEL_DIR`, `NINFER_SERVER`, `NINFER_HOST`, `NINFER_PORT` for every profile; `tuned` also
+`NINFER_MODEL_DIR`, `NINFER_SERVER`, `NINFER_HOST`, `NINFER_PORT`, `NINFER_API_KEY` (passed as
+`--api-key`; the value is never printed) for every profile; `tuned` also
 reads `NINFER_CONTEXT`, `NINFER_CONCURRENCY`, `NINFER_KV_CAPACITY` (Linux), `NINFER_KV_DTYPE`,
 `NINFER_SPEC`, `NINFER_DRAFT_TOKENS`, `NINFER_PREFILL_CHUNK`, `NINFER_VISION`,
 `NINFER_VISION_RESIDENCY`, `NINFER_HOST_CONTEXT_MIB` (default 8192), `NINFER_FALLBACK`, `NINFER_MIN_P` (default 0.03) and
 `NINFER_PRESENCE_PENALTY` (default 0.5). The last two are the loop guard: they are process-level sampling
 overrides for the `tuned` profile only, replacing the registered presets in thinking and non-thinking mode, and
 `default` omits the flag so the registered preset stays in force. Loopback is the default host: `0.0.0.0` publishes an unauthenticated
-endpoint to every network the machine is on, so it is opt-in per run.
+endpoint to every network the machine is on, so it is opt-in per run; pair it with `NINFER_API_KEY` when publishing.
 
 The `tuned` profile also exposes further serving flags, each appended only when its variable is set so the
 defaults stay as measured: `NINFER_MAX_OUTPUT_TOKENS`, `NINFER_MLP_A8_DECODE=on`,

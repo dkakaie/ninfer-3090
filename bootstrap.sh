@@ -48,6 +48,17 @@ export("NINFER_MAX_OUTPUT_TOKENS", cfg.get("max_output_tokens", 32768))
 export("NINFER_PORT", cfg.get("port", 8082))
 export("NINFER_UI_PORT", cfg.get("ui_port", 8090))
 
+# The engine's bind address (default 127.0.0.1) and the key every request must present
+# (--api-key). The Studio stays loopback-only; it forwards the key to the engine itself.
+if cfg.get("host"):
+    export("NINFER_HOST", cfg["host"])
+# A value sets the key; null explicitly turns it OFF, clearing any NINFER_API_KEY the
+# surrounding shell inherited, so a profile is unambiguous about its own auth.
+if cfg.get("api_key"):
+    export("NINFER_API_KEY", cfg["api_key"])
+elif "api_key" in cfg:
+    print("unset NINFER_API_KEY")
+
 # A number pins the context (turns off --fit-context: start at exactly this, or refuse).
 # Absent/null leaves it to --fit-context: start at the largest that fits (<= 262,144).
 ctx = cfg.get("context")
@@ -80,14 +91,17 @@ esac
 [[ -z "$NINFER_CONTEXT_STORE" ]] || mkdir -p -- "$NINFER_CONTEXT_STORE"
 
 # ---- banner ------------------------------------------------------------------------------
+HOST="${NINFER_HOST:-127.0.0.1}"
 printf '\n%s\n' "$(basename -- "$profile")"
 [[ -n "$BS_NOTES" ]] && printf -- '-- %s\n' "$BS_NOTES"
 if [[ "$BS_WEBUI" == on ]]; then
-  printf 'engine  http://127.0.0.1:%s/v1     studio  http://127.0.0.1:%s/\n\n' \
-    "$NINFER_PORT" "$NINFER_UI_PORT"
+  printf 'engine  http://%s:%s/v1     studio  http://127.0.0.1:%s/\n' \
+    "$HOST" "$NINFER_PORT" "$NINFER_UI_PORT"
 else
-  printf 'engine  http://127.0.0.1:%s/v1     (no Studio — foreground, Ctrl+C stops it)\n\n' "$NINFER_PORT"
+  printf 'engine  http://%s:%s/v1     (no Studio — foreground, Ctrl+C stops it)\n' "$HOST" "$NINFER_PORT"
 fi
+[[ -z "${NINFER_API_KEY:-}" ]] || printf 'auth    API key required on every request (NINFER_API_KEY)\n'
+printf '\n'
 
 case "$cmd" in
   start)
