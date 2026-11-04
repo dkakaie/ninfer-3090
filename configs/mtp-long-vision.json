@@ -1,0 +1,11 @@
+{
+  "notes": "Primary coding profile. MTP reaches the full 262,144-token context on this 3090 (DFlash2 caps around 130k beside a desktop). context is left out, so --fit-context starts it at 262k when the card is free and degrades gracefully if something else is on the GPU. Two lanes so a couple of agents can run at once; vision (overlay) stays on for image input. Studio enabled, opens the browser.",
+  "model": "qwen38-27b",
+  "spec": "mtp",
+  "draft_tokens": 7,
+  "lanes": 2,
+  "kv_dtype": "rk4v4",
+  "vision": true,
+  "context_store": "default",
+  "webui": { "enabled": true, "auto_open": true }
+}

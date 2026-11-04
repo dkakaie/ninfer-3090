@@ -1,0 +1,11 @@
+{
+  "notes": "Same as mtp-long-vision but text-only (vision off) for a little more VRAM headroom and no image endpoint. Use it when you are not sending images and want the maximum context. Still MTP, so it reaches 262k beside a desktop.",
+  "model": "qwen38-27b",
+  "spec": "mtp",
+  "draft_tokens": 7,
+  "lanes": 2,
+  "kv_dtype": "rk4v4",
+  "vision": false,
+  "context_store": "default",
+  "webui": { "enabled": true, "auto_open": true }
+}

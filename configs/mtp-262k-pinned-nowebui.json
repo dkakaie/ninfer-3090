@@ -1,0 +1,12 @@
+{
+  "notes": "Guaranteed 262,144 tokens: context is PINNED, which turns off --fit-context, so the engine starts at exactly 262k or refuses to start if the card is too busy (no silent shrink). Run it on a free/headless card. Studio is disabled, so the engine runs in the foreground — stop it with Ctrl+C.",
+  "model": "qwen38-27b",
+  "spec": "mtp",
+  "draft_tokens": 7,
+  "lanes": 2,
+  "kv_dtype": "rk4v4",
+  "vision": true,
+  "context": 262144,
+  "context_store": "default",
+  "webui": { "enabled": false }
+}
