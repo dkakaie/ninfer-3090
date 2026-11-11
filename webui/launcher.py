@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Start, stop and inspect NInfer Studio (web UI) and the ninfer engine.
 
-    python webui/launcher.py start [--no-browser] [--timeout SECONDS]
+    python webui/launcher.py start [--no-browser] [--timeout SECONDS] [--wait]
     python webui/launcher.py stop
     python webui/launcher.py status
 
@@ -17,6 +17,11 @@ Design rules, because this touches a running inference server:
   webui/.state/launcher.json.
 * The UI is only opened after the engine answers /health with 200, which is
   how ninfer reports "model loaded and serving".
+* `start --wait` (used by bootstrap.sh) runs in the foreground: after both are
+  up it blocks until Ctrl+C, which stops the web UI and the engine through the
+  same ownership rules as `stop`. Children run in their own session, so the
+  terminal's Ctrl+C reaches only this process and the engine gets a graceful
+  TERM (it flushes the context store at shutdown) instead of a group signal.
 """
 import os
 import socket
@@ -86,6 +91,7 @@ def wait_ready(timeout, on_poll=None):
 
 def cmd_start(argv):
     no_browser = "--no-browser" in argv
+    wait = "--wait" in argv
     timeout = int(S.ENGINE.get("startup_timeout_s") or 900)
     for i, arg in enumerate(argv):
         if arg == "--timeout" and i + 1 < len(argv):
@@ -138,7 +144,8 @@ def cmd_start(argv):
             ui_command += ["--config", os.path.abspath(S.CFG["_config_file"])]
         proc = subprocess.Popen(ui_command,
                                 cwd=S.PROJECT, stdout=log, stderr=subprocess.STDOUT,
-                                stdin=subprocess.DEVNULL, creationflags=flags if os.name == "nt" else 0)
+                                stdin=subprocess.DEVNULL, creationflags=flags if os.name == "nt" else 0,
+                                start_new_session=os.name != "nt")
         log.close()
         S.ownership.record("ui", proc.pid)
         deadline = time.time() + 30
@@ -159,7 +166,43 @@ def cmd_start(argv):
             webbrowser.open(url)
         except Exception:
             pass
-    return 0
+    if not wait:
+        return 0
+    return wait_foreground()
+
+
+def wait_foreground():
+    """Block until interrupted; the interrupt stops what this launcher owns.
+
+    Polls /health so a dying engine is noticed and reported, not waited on
+    silently. Children run in their own sessions, so only this process sees
+    the terminal's Ctrl+C -- which is what lets the engine get a graceful
+    TERM (context-store flush) through cmd_stop instead of a group signal.
+    """
+    import signal
+
+    state = {"stop": False}
+
+    def on_signal(_signum, _frame):
+        state["stop"] = True
+
+    signal.signal(signal.SIGINT, on_signal)
+    signal.signal(signal.SIGTERM, on_signal)
+    try:
+        say("")
+        say("[i] foreground — press Ctrl+C to stop the web UI and the engine")
+        while not state["stop"]:
+            time.sleep(3.0)
+            if not engine_ready():
+                say("[x] the engine stopped answering /health; see %s" % S.ENGINE_LOG)
+                say("    Stopping what this launcher owns...")
+                break
+        say("")
+        say("[i] stopping...")
+        return cmd_stop([])
+    finally:
+        signal.signal(signal.SIGINT, signal.default_int_handler)
+        signal.signal(signal.SIGTERM, signal.default_int_handler)
 
 
 def cmd_stop(argv):

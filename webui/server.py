@@ -474,7 +474,8 @@ def _start_engine():
         flags = (getattr(subprocess, "CREATE_NO_WINDOW", 0)
                  | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
     proc = subprocess.Popen(shell_args, cwd=PROJECT, stdout=log, stderr=subprocess.STDOUT,
-                            stdin=subprocess.DEVNULL, env=env, creationflags=flags if os.name == "nt" else 0)
+                            stdin=subprocess.DEVNULL, env=env, creationflags=flags if os.name == "nt" else 0,
+                            start_new_session=os.name != "nt")
     log.close()
     ownership.record("engine", proc.pid)
     return {"ok": True, "pid": proc.pid, "command": shell_args, "log": ENGINE_LOG}
