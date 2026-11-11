@@ -10,5 +10,8 @@
   "port": 8082,
   "api_key": null,
   "context_store": "default",
-  "webui": { "enabled": true, "auto_open": true }
+  "webui": {
+    "enabled": true,
+    "auto_open": false
+  }
 }

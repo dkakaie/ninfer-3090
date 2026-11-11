@@ -1,11 +1,12 @@
 {
-  "notes": "Fastest decode for coding: DFlash2 K=7 + n-gram file-copy drafting (~1.4x faster than MTP at one stream, big wins on turns that rewrite a file they just read). Trade-off: the DFlash2 draft model takes extra VRAM, so on this 24 GB card it fits only ~108-130k context beside a desktop instead of 262k. One lane (DFlash2's measured shape). Studio on, but does NOT auto-open the browser.",
+  "notes": "Fastest decode for coding: DFlash2 K=7 + n-gram file-copy drafting (~1.4x faster than MTP at one stream, big wins on turns that rewrite a file they just read). Trade-off: the DFlash2 draft model takes extra VRAM, so on this 24 GB card it fits only ~108-130k context beside a desktop instead of 262k. One lane (DFlash2's measured shape). Prefill chunk 2048 (not 4096): ~300 MiB less cuBLAS workspace, so --fit-context lands ~10k+ tokens higher; costs ~4% prefill speed only. Studio on, but does NOT auto-open the browser.",
   "model": "qwen38-27b",
   "spec": "dflash2",
   "draft_tokens": 7,
   "lanes": 1,
   "kv_dtype": "rk4v4",
   "ngram": true,
+  "env": { "NINFER_PREFILL_CHUNK": "2048" },
   "host": "127.0.0.1",
   "port": 8082,
   "api_key": null,

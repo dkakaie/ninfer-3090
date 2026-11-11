@@ -1,0 +1,23 @@
+{
+  "notes": "Long-context coding with image input, DFlash2 with maximum context. Same shape as coding-long-text (DFlash2 K=7, n-gram drafting, one lane, chunk 2048, 128 MiB fit headroom -- see its notes for the sweep behind it) with vision on in overlay residency: the tower stays host-pinned and costs about 10 MiB of runtime reservation, so a coding agent can paste screenshots at essentially the same ~205k context.",
+  "model": "qwen38-27b",
+  "spec": "dflash2",
+  "draft_tokens": 7,
+  "lanes": 1,
+  "kv_dtype": "rk4v4",
+  "ngram": true,
+  "env": {
+    "NINFER_PREFILL_CHUNK": "2048",
+    "NINFER_FIT_HEADROOM_MIB": "128"
+  },
+  "vision": true,
+  "vision_residency": "overlay",
+  "host": "127.0.0.1",
+  "port": 8082,
+  "api_key": null,
+  "context_store": "default",
+  "webui": {
+    "enabled": true,
+    "auto_open": false
+  }
+}

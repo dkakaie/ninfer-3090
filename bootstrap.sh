@@ -83,12 +83,20 @@ PY
 eval "$envscript"
 
 # ---- context store ---------------------------------------------------------------------
+# default lives in configs/context-store/<model> so the cache is visible and easy to clear;
+# a custom value may be absolute or relative to the repo root.
 case "$BS_CONTEXT_STORE" in
   off)     NINFER_CONTEXT_STORE="" ;;
-  default) NINFER_CONTEXT_STORE="$root/.cache/ninfer-context/$BS_MODEL" ;;
-  *)       NINFER_CONTEXT_STORE="$BS_CONTEXT_STORE" ;;
+  default) NINFER_CONTEXT_STORE="$root/configs/context-store/$BS_MODEL" ;;
+  /*)      NINFER_CONTEXT_STORE="$BS_CONTEXT_STORE" ;;
+  *)       NINFER_CONTEXT_STORE="$root/$BS_CONTEXT_STORE" ;;
 esac
 [[ -z "$NINFER_CONTEXT_STORE" ]] || mkdir -p -- "$NINFER_CONTEXT_STORE"
+# Disk budget for the store: 2 GiB by default (the engine's own default would be half the
+# volume's free space); a profile's env entry overrides it.
+if [[ -n "$NINFER_CONTEXT_STORE" && -z "${NINFER_CONTEXT_STORE_MAX_GIB:-}" ]]; then
+  export NINFER_CONTEXT_STORE_MAX_GIB=2
+fi
 
 # ---- banner ------------------------------------------------------------------------------
 HOST="${NINFER_HOST:-127.0.0.1}"
@@ -109,7 +117,8 @@ case "$cmd" in
       command -v uv >/dev/null 2>&1 || { printf 'bootstrap: uv is needed for the Studio (https://docs.astral.sh/uv/)\n' >&2; exit 1; }
       uiargs=()
       [[ "$BS_AUTO_OPEN" == on ]] || uiargs+=(--no-browser)
-      exec "$root/scripts/start-ui.sh" "${uiargs[@]}"
+      # --wait: the console stays open; Ctrl+C stops the web UI and the engine together.
+      exec "$root/scripts/start-ui.sh" --wait "${uiargs[@]}"
     else
       exec "$root/scripts/run.sh" "$BS_MODEL" tuned
     fi

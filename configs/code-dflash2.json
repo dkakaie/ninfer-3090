@@ -1,0 +1,16 @@
+{
+  "notes": "Coding, one stream: exactly the measured DFlash2 set that scripts/run.sh builds for NINFER_SPEC=dflash2 (docs/performance.md) -- K=7 + n-gram copy drafting (+42% decode at one lane on agent traffic that writes back files it has read), prefill chunk 4096 (the measured prefill default), one lane, full 262,144 context ceiling (fits smaller when the card is busy). 2026-11-11 sweep: 226 tok/s on code. Vision on in overlay residency (tower in host RAM, ~10 MiB).",
+  "model": "qwen38-27b",
+  "spec": "dflash2",
+  "draft_tokens": 7,
+  "lanes": 1,
+  "kv_dtype": "rk4v4",
+  "ngram": true,
+  "vision": true,
+  "vision_residency": "overlay",
+  "host": "127.0.0.1",
+  "port": 8082,
+  "api_key": null,
+  "context_store": "default",
+  "webui": { "enabled": true, "auto_open": false }
+}

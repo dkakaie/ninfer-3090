@@ -1,0 +1,23 @@
+{
+  "notes": "Long-context coding, text-only, DFlash2 with maximum context. 2026-11-11 profile sweep: DFlash2 K=7 decodes coding work ~1.45x faster than MTP (226 tok/s vs 152, 76% n-gram copy acceptance) and its fit reached 197,632 tokens beside a 0.9 GiB desktop. This profile buys the most context DFlash2 allows: prefill chunk 2048 (~300 MiB less cuBLAS workspace, +~10k tokens) and a 128 MiB fit headroom instead of the 256 default (+~5k, fine on a headless card), so expect ~205k on a card as free as the sweep's and more if you free the card fully. One lane: the measured shape, and the widest fit. Set lanes to 2 if you run agents concurrently (costs a little context).",
+  "model": "qwen38-27b",
+  "spec": "dflash2",
+  "draft_tokens": 7,
+  "lanes": 1,
+  "kv_dtype": "rk4v4",
+  "ngram": true,
+  "env": {
+    "NINFER_PREFILL_CHUNK": "2048",
+    "NINFER_FIT_HEADROOM_MIB": "128"
+  },
+  "vision": false,
+  "host": "127.0.0.1",
+  "context": 192000,
+  "port": 8082,
+  "api_key": null,
+  "context_store": "default",
+  "webui": {
+    "enabled": true,
+    "auto_open": false
+  }
+}

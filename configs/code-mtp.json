@@ -1,0 +1,15 @@
+{
+  "notes": "Coding, two lanes: the measured MTP set (scripts/run.sh NINFER_SPEC=mtp) with the draft count raised for coding. docs/performance.md table (one stream, rk4v4): when the output re-echoes the input -- refactors, edits that return the whole file -- K=15 hits 262.6 tok/s, 1.85x K=3's 141.9; but writing NEW code peaks at K=7 (130.6 vs 114.7 at K=15) and prose prefers K=3. Set draft_tokens to 7 for new-code-heavy sessions, 3 for general chat. Two lanes share the full 262,144 context (MTP fits it even beside a desktop). Vision on in overlay residency.",
+  "model": "qwen38-27b",
+  "spec": "mtp",
+  "draft_tokens": 15,
+  "lanes": 2,
+  "kv_dtype": "rk4v4",
+  "vision": true,
+  "vision_residency": "overlay",
+  "host": "127.0.0.1",
+  "port": 8082,
+  "api_key": null,
+  "context_store": "default",
+  "webui": { "enabled": true, "auto_open": false }
+}
