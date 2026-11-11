@@ -57,6 +57,29 @@ client, stages the NVFP4 artifact once in `/dev/shm`, stores raw/progress/Serve 
 JSON, and CSV summaries. The case catalog, exact profiles, TTFT boundary, and fixture qualification
 are documented in the dedicated README.
 
+## Profile sweep (choose a serving profile)
+
+`run_profile_sweep.py` answers "which `configs/*.json` profile should I run?" It walks every
+profile in turn: starts `ninfer-serve` with exactly the flags the measured launcher would build
+(the derivation mirrors `scripts/run.sh` `tuned`; a live `bootstrap.sh` start carries the same
+flag set), plus three deterministic additions — `--greedy`, `--no-prefix-reuse` (every measured
+prefill is fully cold) and `--request-log-jsonl` (server-measured timings). After one warm-up
+request it runs a fixed workload set — prose, code, a math problem, a long prefill, identical for
+every profile — one cold run then measured runs, averages them, stops the server, and moves on.
+One request at a time, so every number is a single-stream measurement.
+
+```bash
+bash tools/bench/run-profile-sweep.sh             # all configs/*.json, free the GPU first
+bash tools/bench/run-profile-sweep.sh --dry-run   # print the derived commands only
+```
+
+It aborts when less than 20 GiB of VRAM is free (`--min-free-gib`, `--force`). Results land in
+`benchmark_results/profile_sweep_<timestamp>/`: per-profile `command.json`, `server.log`,
+`request-log.jsonl`, `responses.jsonl` and `summary.json`, plus `sweep.csv` / `sweep.json` and a
+printed table of prefill tok/s, decode tok/s, TTFT and speculative acceptance per profile and
+workload, cold and warm. A profile that fails to start (e.g. a pinned 262k that does not fit) is
+recorded with its log tail and the sweep continues.
+
 ## Agent rotation (context-cache retention)
 
 `run_agent_rotation.py` drives an already-running `ninfer-serve` with N independent agent
