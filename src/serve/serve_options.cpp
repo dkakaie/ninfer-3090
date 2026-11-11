@@ -140,7 +140,8 @@ KvCapacityPolicy parse_kv_capacity(const char* text) {
 
 std::string serve_usage_text(const char* argv0) {
     return std::string("usage: ") + argv0 +
-           " <model.ninfer> [--host H] [--port N] [--api-key KEY] "
+           " [model.ninfer] [--config PROFILE.json [--print-args]] [--webui] "
+           "[--host H] [--port N] [--api-key KEY] "
            "[--model-id ID] [--max-context N] [--kv-capacity N|auto] [--fit-context MIN] "
            "[--max-concurrency N] "
            "[--max-pending-requests N] [--pending-timeout-ms N] "
@@ -180,7 +181,14 @@ std::string serve_usage_text(const char* argv0) {
            "[--temperature F] [--top-p F] [--top-k N] [--min-p F] [--presence-penalty F] "
            "[--frequency-penalty F] [--seed N] [--greedy]\n"
            "       [--log-level trace|debug|info|warning|error|critical|off]\n"
-           "       serves OpenAI Responses/Chat Completions and Anthropic Messages endpoints\n"
+            "       serves OpenAI Responses/Chat Completions and Anthropic Messages endpoints\n"
+            "       --config PROFILE.json starts from a serving profile (configs/*.json): its derived "
+            "flags are the base and the explicit flags on this line override them; its env entries are "
+            "applied to the process, and \"api_key\": null clears an inherited NINFER_API_KEY\n"
+            "       --print-args prints the derived command line (any API key redacted) and exits "
+            "without loading a model\n"
+            "       --webui serves the embedded Studio at /webui on the engine's listener (anonymous, "
+            "like /health); a profile's webui.enabled does the same\n"
            "       --default-max-tokens fixes the output budget of requests that omit a limit; "
            "unset, such a request may run to the end of its context\n"
            "       --max-output-tokens caps the output budget of every request, including ones "
@@ -709,6 +717,8 @@ ServeOptions parse_serve_options(int argc, char** argv) {
             options.default_reasoning_effort = *effort;
         } else if (arg == "--cors") {
             options.enable_cors = true;
+        } else if (arg == "--webui") {
+            options.webui_enabled = true;
         } else if (arg == "--temperature") {
             options.sampling_overrides.temperature =
                 parse_float_in(require_value("--temperature"), "temperature", 0.0f, 2.0f);

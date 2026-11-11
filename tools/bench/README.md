@@ -60,9 +60,9 @@ are documented in the dedicated README.
 ## Profile sweep (choose a serving profile)
 
 `run_profile_sweep.py` answers "which `configs/*.json` profile should I run?" It walks every
-profile in turn: starts `ninfer-serve` with exactly the flags the measured launcher would build
-(the derivation mirrors `scripts/run.sh` `tuned`; a live `bootstrap.sh` start carries the same
-flag set), plus three deterministic additions — `--greedy`, `--no-prefix-reuse` (every measured
+profile in turn: starts `ninfer-serve` with exactly the flags the engine's `--config` mapper
+would build (the derivation mirrors `scripts/run.sh` `tuned`; `ninfer-serve --config <profile>
+--print-args` carries the same flag set), plus three deterministic additions — `--greedy`, `--no-prefix-reuse` (every measured
 prefill is fully cold) and `--request-log-jsonl` (server-measured timings). After one warm-up
 request it runs a fixed workload set — prose, code, a math problem, a long prefill, identical for
 every profile — one cold run then measured runs, averages them, stops the server, and moves on.

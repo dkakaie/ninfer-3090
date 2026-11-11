@@ -594,10 +594,15 @@ void OperationalLog::listen_failure(std::string_view host, int port) const {
 }
 
 void OperationalLog::server_ready(std::string_view host, int port, std::string_view model_id,
-                                  bool auth_enabled) const {
-    logger_->info("listening on http://{}:{} | model {} | auth {}",
-                  product::format_pretty_text(host), port, product::format_pretty_text(model_id),
-                  auth_enabled ? "bearer" : "disabled");
+                                  bool auth_enabled, bool webui_enabled) const {
+    // The embedded Studio replaces the old launcher's auto-opened browser: the URL is logged
+    // here so a keyed or headless box shows where it is without guessing.
+    std::ostringstream out;
+    out << "listening on http://" << product::format_pretty_text(host) << ':' << port
+        << " | model " << product::format_pretty_text(model_id)
+        << " | auth " << (auth_enabled ? "bearer" : "disabled");
+    if (webui_enabled) { out << " | Studio http://" << product::format_pretty_text(host) << ':' << port << "/webui/"; }
+    logger_->info(out.str());
 }
 
 void OperationalLog::server_stopped() const { logger_->info("server stopped"); }

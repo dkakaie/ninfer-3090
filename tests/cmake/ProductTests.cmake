@@ -44,6 +44,17 @@ ninfer_add_test(ninfer_serve_options_test
   SOURCES "${CMAKE_CURRENT_LIST_DIR}/../test_serve_options.cpp"
   LIBRARIES ninfer_serve)
 
+ninfer_add_test(ninfer_config_profile_test
+  SOURCES "${CMAKE_CURRENT_LIST_DIR}/../test_config_profile.cpp"
+  LIBRARIES ninfer_serve)
+
+ninfer_add_test(ninfer_webui_assets_test
+  SOURCES "${CMAKE_CURRENT_LIST_DIR}/../test_webui_assets.cpp"
+  LIBRARIES ninfer_serve)
+# The asset table is generated into the build tree (src/serve/webui_assets.h) by
+# make_webui_assets.cmake; linking ninfer_serve orders its generation first.
+target_include_directories(ninfer_webui_assets_test PRIVATE ${CMAKE_BINARY_DIR}/src/serve)
+
 ninfer_add_test(ninfer_request_log_test
   SOURCES "${CMAKE_CURRENT_LIST_DIR}/../test_request_log.cpp"
   LIBRARIES ninfer_serve ninfer_product_version)

@@ -122,6 +122,9 @@ struct ServeOptions {
     // thinking by default is --no-thinking.
     std::optional<RequestedReasoningEffort> default_reasoning_effort;
     bool enable_cors       = false; // send permissive CORS headers for browser UIs
+    // Serve the embedded Studio at /webui on this listener (anonymous, like /health). Set by a
+    // profile's webui.enabled or the --webui flag; off by default.
+    bool webui_enabled = false;
     // Process-level explicit overrides layered between registered model/mode defaults and request
     // fields. An omitted seed is replaced per request with a fresh random seed.
     SamplingOverrides sampling_overrides;

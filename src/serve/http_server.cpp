@@ -7,14 +7,18 @@
 #include "serve/props.h"
 #include "serve/request_log.h"
 
+#include "webui_assets.h"
+
 #include <nlohmann/json.hpp>
 
 #include <chrono>
 #include <exception>
+#include <iostream>
 #include <mutex>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <utility>
 
 namespace ninfer::serve {
@@ -236,6 +240,24 @@ HttpServer::HttpServer(ServeOptions options, std::shared_ptr<spdlog::logger> log
     };
     server_.set_socket_options(configure_http_server_socket);
     server_.set_payload_max_length(options_.max_request_bytes);
+    // Request-line log with credentials redacted: /api/stream accepts the API key as a ?key=
+    // query parameter (EventSource cannot set request headers), and the raw request line is the
+    // one log surface where it would otherwise end up.
+    server_.set_logger([](const httplib::Request& req, const httplib::Response& res) {
+        std::string line = req.method + " " + req.path;
+        if (!req.params.empty()) {
+            line += '?';
+            bool first = true;
+            for (const auto& [name, value] : req.params) {
+                if (!first) { line += '&'; }
+                first = false;
+                line += name + "=";
+                if (name == "key") { line += "****"; continue; }
+                line += value;
+            }
+        }
+        std::cerr << line << ' ' << res.status << std::endl;
+    });
     register_routes();
 }
 
@@ -383,10 +405,16 @@ void HttpServer::register_routes() {
     server_.set_pre_routing_handler([this](const httplib::Request& req, httplib::Response& res) {
         ensure_http_request_id(req, res);
         set_version_header(res);
-        if (!ready_.load(std::memory_order_acquire)) {
-            // Runs for every route, including /health and OPTIONS, so a caller cannot tell "not
-            // ready" apart from "unauthenticated" -- and skips the API-key check below, since a
-            // loading-status response carries nothing worth protecting.
+        // The embedded Web UI (/, /webui/*) and its metrics stream follow /health's policy:
+        // anonymous even when an API key is set, and answered while the model is still loading --
+        // the page shows the loading state, and /api/stream emits ready:false frames until
+        // attach() publishes the service.
+        const bool webui_request = req.path == "/" || req.path.rfind("/webui", 0) == 0;
+        const bool stream_request = req.path == "/api/stream" && options_.webui_enabled;
+        if (!webui_request && !stream_request && !ready_.load(std::memory_order_acquire)) {
+            // Runs for every other route, including /health and OPTIONS, so a caller cannot tell
+            // "not ready" apart from "unauthenticated" -- and skips the API-key check below, since
+            // a loading-status response carries nothing worth protecting.
             ApiError error;
             error.status  = 503;
             error.type    = "service_unavailable";
@@ -402,7 +430,27 @@ void HttpServer::register_routes() {
             }
             return httplib::Server::HandlerResponse::Handled;
         }
-        if (options_.api_key.empty() || req.path == "/health" || req.method == "OPTIONS") {
+        if (options_.api_key.empty() || req.method == "OPTIONS") {
+            return httplib::Server::HandlerResponse::Unhandled;
+        }
+        if (webui_request || req.path == "/health") {
+            return httplib::Server::HandlerResponse::Unhandled;
+        }
+        if (stream_request) {
+            // EventSource cannot set request headers, so the stream also accepts the key as a
+            // query parameter. The constructor's logger redacts it from the request line.
+            const bool key_ok = req.get_param_value("key") == options_.api_key;
+            if (!key_ok &&
+                !matches_bearer_credential(req.get_header_value("Authorization"), options_.api_key) &&
+                req.get_header_value("x-api-key") != options_.api_key) {
+                ApiError error;
+                error.status  = 401;
+                error.type    = "invalid_request_error";
+                error.code    = "invalid_api_key";
+                error.message = "missing or invalid API key";
+                write_openai_error(res, error);
+                return httplib::Server::HandlerResponse::Handled;
+            }
             return httplib::Server::HandlerResponse::Unhandled;
         }
         // Accept both the OpenAI-style bearer token and the Anthropic-style
@@ -483,6 +531,24 @@ void HttpServer::register_routes() {
                             .dump(),
                         "application/json");
     });
+    if (options_.webui_enabled) {
+        // Root redirects into the embedded Web UI; the assets themselves are compiled into the
+        // binary (webui_assets.h), so the serve app ships with no installable UI files.
+        server_.Get("/", [](const httplib::Request&, httplib::Response& res) {
+            res.status = 302;
+            res.set_header("Location", "/webui/");
+        });
+        server_.Get(R"(/webui/?(.*))", [](const httplib::Request& req, httplib::Response& res) {
+            const std::string tail = req.matches[1].str();
+            const std::string name = tail.empty() ? "/index.html" : "/" + tail;
+            std::string data;
+            if (!webui::find_asset(name, &data)) { res.status = 404; return; }
+            res.set_content(data, webui::mime_for(name));
+        });
+        server_.Get("/api/stream", [this](const httplib::Request& req, httplib::Response& res) {
+            handle_stream(req, res);
+        });
+    }
     server_.Get("/v1/load", [this](const httplib::Request& req, httplib::Response& res) {
         handle_load(req, res);
     });
@@ -564,6 +630,37 @@ void HttpServer::handle_load(const httplib::Request&, httplib::Response& res) co
     sample.last_generation   = metrics_.last_generation_pace();
     res.set_header("Cache-Control", "no-store");
     res.set_content(make_load_report(load_capacity_, sample), "application/json");
+}
+
+void HttpServer::handle_stream(const httplib::Request&, httplib::Response& res) {
+    // The Web UI's metrics feed: the /v1/load payload plus readiness and residency, one SSE frame
+    // every two seconds. Until attach() the frames carry ready:false so the page can show the
+    // loading state; each frame doubles as the stream's keep-alive traffic.
+    prepare_sse_response(res);
+    res.set_chunked_content_provider(
+        "text/event-stream", [this](std::size_t, httplib::DataSink& sink) -> bool {
+            const bool ready = ready_.load(std::memory_order_acquire);
+            nlohmann::json payload = nlohmann::json::object();
+            if (ready) {
+                LoadSample sample;
+                sample.uptime_seconds =
+                    std::chrono::duration<double>(std::chrono::steady_clock::now() - attached_at_)
+                        .count();
+                sample.admitted_requests = service_->admitted_requests();
+                sample.stats             = service_->runtime_stats();
+                sample.last_generation   = metrics_.last_generation_pace();
+                payload                  = nlohmann::json::parse(
+                    make_load_report(load_capacity_, sample));
+                payload["suspended"] =
+                    service_->residency().state == ninfer::ModelResidency::Suspended;
+            }
+            payload["ready"] = ready;
+            const std::string frame = "data: " + payload.dump() + "\n\n";
+            // DataSink::write goes straight to the socket; false means the peer went away.
+            if (!sink.write(frame.data(), frame.size())) { return false; }
+            std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+            return true;
+        });
 }
 
 void HttpServer::handle_props(const httplib::Request&, httplib::Response& res) const {

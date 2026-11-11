@@ -1,0 +1,85 @@
+#pragma once
+// Generated from src/serve/webui by make_webui_assets.cmake -- do not edit.
+#include <cstddef>
+#include <string>
+#include <vector>
+
+namespace ninfer {
+namespace serve {
+namespace webui {
+
+// One embedded asset; data is decoded from hex on first access.
+struct Asset {
+  std::string path;
+  std::string data;
+};
+
+namespace detail {
+
+inline int hex_nibble(char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  return 0;
+}
+
+inline std::string decode_hex(const char* hex) {
+  std::size_t n = 0;
+  while (hex[n] != '\0') ++n;
+  std::string out;
+  out.reserve(n / 2);
+  for (std::size_t i = 0; i + 1 < n; i += 2)
+    out.push_back(static_cast<char>((hex_nibble(hex[i]) << 4) | hex_nibble(hex[i + 1])));
+  return out;
+}
+
+struct Entry {
+  const char* path;
+  const char* hex;
+};
+
+inline const Entry kEntries[] = {
+@ENTRIES@
+};
+
+inline const std::vector<Asset>& assets() {
+  static const std::vector<Asset> table = [] {
+    std::vector<Asset> v;
+    v.reserve(sizeof(kEntries) / sizeof(kEntries[0]));
+    for (const auto& e : kEntries) v.push_back({e.path, decode_hex(e.hex)});
+    return v;
+  }();
+  return table;
+}
+
+}  // namespace detail
+
+// Find an embedded asset by its URL path (e.g. "/index.html").
+inline bool find_asset(const std::string& path, std::string* data) {
+  for (const auto& a : detail::assets())
+    if (a.path == path) {
+      if (data != nullptr) *data = a.data;
+      return true;
+    }
+  return false;
+}
+
+// Content type for a Web UI asset path.
+inline const char* mime_for(const std::string& path) {
+  std::string ext;
+  const std::size_t dot = path.find_last_of('.');
+  if (dot != std::string::npos) {
+    const std::size_t slash = path.find_last_of('/');
+    if (slash == std::string::npos || dot > slash) ext = path.substr(dot);
+  }
+  if (ext == ".html") return "text/html; charset=utf-8";
+  if (ext == ".js") return "text/javascript; charset=utf-8";
+  if (ext == ".css") return "text/css; charset=utf-8";
+  if (ext == ".svg") return "image/svg+xml";
+  if (ext == ".woff2") return "font/woff2";
+  return "application/octet-stream";
+}
+
+}  // namespace webui
+}  // namespace serve
+}  // namespace ninfer

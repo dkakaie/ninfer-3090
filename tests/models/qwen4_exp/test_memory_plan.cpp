@@ -393,12 +393,17 @@ void test_kv_growth() {
     const std::uint64_t iq2 = 1'474'560;
     const std::uint32_t take = kv_growth_frames(1344 * kMiB, 0, 12'258, iq2, chunk);
     require(take > 1344 * kMiB / iq2 && take <= 1344 * kMiB / iq2 + chunk / iq2 + 2, "128K growth takes ~1 chunk over");
-    for (const std::uint64_t stride : {iq2, 1'048'576ULL, 3'000'000ULL, 67'108'864ULL, 100'000'000ULL}) {
+    // Typed arrays (not brace-initialized range-fors): uint64_t is `unsigned long` on this platform,
+    // so mixing `uint64_t` values with `ULL` literals fails initializer-list type deduction.
+    const std::uint64_t strides[] = {iq2, 1'048'576, 3'000'000, 67'108'864, 100'000'000};
+    for (const std::uint64_t stride : strides) {
         for (const std::uint64_t added : {2 * kMiB, 130 * kMiB, 1344 * kMiB, 3500 * kMiB}) {
-            for (const std::uint64_t spare : {0ULL, kMiB, 100 * kMiB, 2000 * kMiB}) {
+            const std::uint64_t spares[] = {0, kMiB, 100 * kMiB, 2000 * kMiB};
+            for (const std::uint64_t spare : spares) {
                 for (const std::uint32_t frames : {3000U, 12'258U}) {
                     // The frame pool maps whole chunks: from the frames' bytes up to one chunk above.
-                    for (const std::uint64_t slack : {0ULL, chunk / 2, chunk - 1}) {
+                    const std::uint64_t slacks[] = {0, chunk / 2, chunk - 1};
+                    for (const std::uint64_t slack : slacks) {
                         const std::uint64_t used = static_cast<std::uint64_t>(frames) * stride;
                         const std::uint64_t mapped = (used + slack + chunk - 1) / chunk * chunk;
                         const std::uint32_t give = kv_growth_frames(added, spare, frames, stride, chunk);

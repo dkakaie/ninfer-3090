@@ -8,11 +8,12 @@ Single command (run after freeing the GPU -- `nvidia-smi` shows who holds it):
     bash tools/bench/run-profile-sweep.sh --dry-run  # print the commands only
 
 For each profile JSON the sweep:
-  1. starts `build-linux/apps/ninfer-serve` with exactly the flags the measured
-     launcher would build (the derivation below mirrors scripts/run.sh `tuned`,
-     and was verified byte-for-byte against a live bootstrap start), plus three
-     deterministic additions: --greedy (temperature 0), --no-prefix-reuse (no
-     cross-request caching, so every measured run prefill is fully cold) and
+  1. starts `build-linux/apps/ninfer-serve` with exactly the flags the engine's
+     `--config` mapper builds for the profile (the derivation below mirrors
+     scripts/run.sh `tuned`, and was verified byte-for-byte against
+     `ninfer-serve --config <profile> --print-args`), plus three deterministic
+     additions: --greedy (temperature 0), --no-prefix-reuse (no cross-request
+     caching, so every measured run prefill is fully cold) and
      --request-log-jsonl (server-measured timings);
   2. waits for /health, does one short warm-up request (CUDA/cuBLAS warm), then
      runs a fixed workload set -- prose, code, a math problem and a long prefill,
@@ -88,8 +89,8 @@ THINKING = "none"  # greedy speed sweep; the thinking budget would add nondeterm
 # Flag derivation. Mirrors scripts/run.sh `tuned` (the qwen38-27b arm, 2026-11-11
 # state): spec args, KV, prefill chunk, ngram, vision, pending limits, host
 # context budget, output cap, sampling guard and the fit-context floor. The
-# live engine started by `bootstrap.sh configs/mtp-long-vision.json` carries
-# exactly this flag set (verified against /proc/<pid>/cmdline), so the sweep
+# live engine started by `ninfer-serve --config configs/mtp-long-vision.json`
+# carries exactly this flag set (verified against --print-args), so the sweep
 # measures the deployment shape, not a re-invention of it. Diverge deliberately
 # only through the three deterministic additions in derive_command().
 # ---------------------------------------------------------------------------
@@ -116,26 +117,31 @@ def derive_command(cfg: dict, server: Path, model: Path, port: int, host: str,
     ]
     if spec != "none":
         flags += ["--spec", spec, "--draft-tokens", str(draft), "--lm-head-draft"]
-    # bootstrap.sh always exports NINFER_NGRAM explicitly (default: on for dflash2),
-    # and run.sh honours an explicit on for every lane count.
+    # NINFER_NGRAM defaults to on for dflash2 (the engine's --config mapper does the
+    # same), and run.sh honours an explicit on for every lane count.
     if cfg.get("ngram", spec == "dflash2") and spec == "dflash2":
         flags += ["--ngram-draft-tokens", "15"]
     flags += [
         "--gdn-state-fp16",
         "--prefill-cublas", "--prefill-chunk", str(chunk),
         "--max-pending-requests", "16", "--pending-timeout-ms", "600000",
+    ]
+    if cfg.get("vision", False):
+        # run.sh injects the vision pair right after the pending limits (and the engine's --config
+        # mapper emits it in the same position); keep all three argv shapes identical.
+        flags += ["--vision", "--vision-residency", cfg.get("vision_residency", "overlay")]
+    flags += [
         "--host-context-mib", _env_int(env, "NINFER_HOST_CONTEXT_MIB", "8192"),
         "--max-output-tokens", _env_int(env, "NINFER_MAX_OUTPUT_TOKENS",
                                         str(cfg.get("max_output_tokens", 32768))),
         "--min-p", _env_int(env, "NINFER_MIN_P", "0.03"),
         "--presence-penalty", _env_int(env, "NINFER_PRESENCE_PENALTY", "0.5"),
     ]
-    if cfg.get("vision", False):
-        flags += ["--vision", "--vision-residency", cfg.get("vision_residency", "overlay")]
     if not context:  # run.sh adds --fit-context only when context is not pinned
         flags += ["--fit-context", "32768"]
-        if "NINFER_FIT_HEADROOM_MIB" in env:
-            flags += ["--fit-headroom-mib", str(env["NINFER_FIT_HEADROOM_MIB"])]
+        # NINFER_FIT_HEADROOM_MIB is exported by some profiles but has no engine
+        # consumer and no CLI flag; it stays an inert passthrough, so nothing is
+        # emitted for it here.
     # The deliberate divergences: determinism and server-side timing.
     flags += ["--greedy", "--no-prefix-reuse", "--request-log-jsonl", str(request_log)]
     api_key = cfg.get("api_key")

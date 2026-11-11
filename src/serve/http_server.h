@@ -113,6 +113,9 @@ private:
     void handle_response_cancel(const httplib::Request& req, httplib::Response& res);
     void handle_response_compact(const httplib::Request& req, httplib::Response& res);
     void handle_load(const httplib::Request& req, httplib::Response& res) const;
+    // GET /api/stream: the embedded Web UI's metrics feed. Emits the /v1/load payload plus
+    // readiness and residency every two seconds; the UI displays live load without polling.
+    void handle_stream(const httplib::Request& req, httplib::Response& res);
     [[nodiscard]] ModelDescription model_description() const;
     void handle_props(const httplib::Request& req, httplib::Response& res) const;
     void handle_models(const httplib::Request& req, httplib::Response& res) const;

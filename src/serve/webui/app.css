@@ -95,6 +95,14 @@ a{color:inherit}
   border-radius:var(--ui-r-md);font-size:var(--ui-fs-sm);font-weight:var(--ui-fw-medium);
 }
 .conn-banner .btn{margin-left:auto}
+/* API-key banner: the input joins the button cluster on the right edge */
+#keyBanner input{
+  margin-left:auto;flex:0 1 240px;min-width:140px;padding:7px 10px;
+  border:1px solid color-mix(in srgb,var(--ui-warn) 55%,transparent);
+  border-radius:var(--ui-r-sm);background:var(--ui-surface);color:var(--ui-ink);
+  font:inherit;font-size:var(--ui-fs-sm);
+}
+#keyBanner .btn{margin-left:0}
 
 /* ── layout ─────────────────────────────────────────────── */
 main{padding:var(--ui-s6) var(--ui-s6) var(--ui-s12);max-width:1560px;margin:0 auto}

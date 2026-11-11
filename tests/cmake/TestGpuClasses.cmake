@@ -17,6 +17,7 @@ set(NINFER_CPU_ONLY_TESTS
   ninfer_bench_support_test
   ninfer_chat_templates_test
   ninfer_cli_options_test
+  ninfer_config_profile_test
   ninfer_context_cost_measure_test
   ninfer_context_cost_test
   ninfer_context_store_test
@@ -77,6 +78,7 @@ set(NINFER_CPU_ONLY_TESTS
   ninfer_serve_options_test
   ninfer_tensor_test
   ninfer_tool_call_parser_test
+  ninfer_webui_assets_test
   ninfer_wide_math_test
   ninfer_worker_recovery_test
 )
