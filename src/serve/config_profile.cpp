@@ -415,8 +415,12 @@ DerivedProfile derive_profile(const std::filesystem::path& profile,
 
     // ---- context store -----------------------------------------------------------------
     // default: configs/context-store/<model> beside the repository; a path may be absolute or
-    // relative to the repository root; "" disables the store.
-    const std::string store = json_string(root, "context_store", "default");
+    // relative to the repository root; "" or null disables the store.
+    const std::string store = [&] {
+        const auto it = root.find("context_store");
+        if (it != root.end() && it->is_null()) { return std::string(); } // null disables the store
+        return json_string(root, "context_store", "default");
+    }();
     std::string store_dir;
     if (!store.empty()) {
         if (store == "default") {

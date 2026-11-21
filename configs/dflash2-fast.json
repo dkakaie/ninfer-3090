@@ -6,11 +6,16 @@
   "lanes": 1,
   "kv_dtype": "rk4v4",
   "ngram": true,
-  "env": { "NINFER_PREFILL_CHUNK": "2048" },
+  "env": {
+    "NINFER_PREFILL_CHUNK": "2048"
+  },
   "host": "127.0.0.1",
   "port": 8082,
   "api_key": null,
   "vision": false,
-  "context_store": "default",
-  "webui": { "enabled": true, "auto_open": false }
+  "context_store": null,
+  "webui": {
+    "enabled": true,
+    "auto_open": false
+  }
 }

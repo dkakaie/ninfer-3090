@@ -296,6 +296,8 @@ int main() {
               "an absolute store path was rewritten");
         check(!has_flag(derive(R"({"context_store":""})").argv, "--context-store"),
               "an empty context_store did not turn the store off");
+        check(!has_flag(derive(R"({"context_store":null})").argv, "--context-store"),
+              "a null context_store did not turn the store off");
         check(has_arg(derive(R"({"env":{"NINFER_CONTEXT_STORE_MAX_GIB":"8"}})", root).argv,
                           "--context-store-max-gib", "8"),
               "a chosen store budget was lost");

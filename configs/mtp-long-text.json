@@ -9,7 +9,7 @@
   "host": "127.0.0.1",
   "port": 8082,
   "api_key": null,
-  "context_store": "default",
+  "context_store": null,
   "webui": {
     "enabled": true,
     "auto_open": false

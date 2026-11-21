@@ -51,7 +51,7 @@ Every key is optional; the defaults are shown.
 | `port` | `8082` | the single listener port: API and Web UI share it |
 | `host` | `127.0.0.1` | bind address → `--host` |
 | `api_key` | *(absent)* | a value: required as bearer token or `x-api-key` header on every request → `--api-key` (the Studio page has a key field and forwards it; `/health` stays open). `null`: explicitly **no** key — it clears any `NINFER_API_KEY` the shell inherited, so the profile is unambiguous about its own auth. Absent: inherits the environment. |
-| `context_store` | `default` | `default` → `configs/context-store/<model>` · a path (relative to the repo root, or absolute) · `""` to disable. Budget: 2 GiB by default (`--context-store-max-gib`), override with `env: {"NINFER_CONTEXT_STORE_MAX_GIB": "8"}`. |
+| `context_store` | `default` | `default` → `configs/context-store/<model>` · a path (relative to the repo root, or absolute) · `""` or `null` to disable. Budget: 2 GiB by default (`--context-store-max-gib`), override with `env: {"NINFER_CONTEXT_STORE_MAX_GIB": "8"}`. |
 | `webui.enabled` | `true` | serve the Studio at `/webui/` on the engine's listener (anonymous, like `/health`). `false` → no `/webui` routes at all (API only). |
 | `webui.auto_open` | *(ignored)* | the engine does not open browsers; it logs the Studio URL in the startup line instead (`listening on http://… | Studio http://…/webui/`) |
 | `env` | *(none)* | extra environment applied with `setenv` before the engine starts, e.g. `{"NINFER_PREFILL_CHUNK": "2048"}`. Any `NINFER_*` knob the engine reads straight from the environment (e.g. `NINFER_CUDA_SYNC`) keeps working this way. An `env` entry also wins over the profile's own keys where they overlap (e.g. `NINFER_API_KEY` over `api_key`). |
